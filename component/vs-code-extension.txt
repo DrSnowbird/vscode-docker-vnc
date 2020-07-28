@@ -1,0 +1,10 @@
+AlanWalk.markdown-navigation
+docsmsft.docs-markdown
+DougFinke.vscode-pandoc
+joaompinto.asciidoctor-vscode
+notZaki.pandocciter
+swellaby.node-pack
+tgreen7.vs-code-node-require
+waderyan.nodejs-extension-pack
+wibblemonkey.markdown-auto-toc
+yzhang.markdown-all-in-one

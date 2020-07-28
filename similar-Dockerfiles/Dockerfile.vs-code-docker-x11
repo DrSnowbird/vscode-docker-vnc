@@ -1,0 +1,69 @@
+ROM openkbs/jdk-mvn-py3-x11
+
+MAINTAINER rsheu@mitre.org
+
+## ---- USER_NAME is defined in parent image: openkbs/jdk-mvn-py3-x11 already ----
+
+###########################################################################
+#### ---- DO NOT CHANGE Below unless release location changed    ---- #####
+###########################################################################
+
+###########################################################################
+#### ---- VSCode Specifics: Debian: Install ---- #####
+###########################################################################
+ENV VSCODE_VERSION=1.47.2
+
+WORKDIR ${HOME}
+
+# https://github.com/protegeproject/protege-distribution/releases/download/v5.5.0/VSCode-5.5.0-linux.tar.gz
+ARG VSCODE_TGZ_URL=https://go.microsoft.com/fwlink/?LinkID=760868 
+ARG VSCODE_PKG=code_1.47.2-1594837870_amd64.de
+#RUN wget -cq --no-check-certificate https://go.microsoft.com/fwlink/?LinkID=760868 -O code_1.47.2-1594837870_amd64.deb
+RUN wget -cq --no-check-certificate ${VSCODE_TGZ_URL} -O ${VSCODE_PKG}
+RUN sudo apt install -y ./${VSCODE_PKG} 
+
+RUN rm -f ${VSCODE_PKG}
+
+ENV VSCODE_HOME=/usr/share/code
+
+#ENV VSCODE_PLUGIN=${VSCODE_PLUGIN:-${VSCODE_HOME}/plugins}
+#ENV VSCODE_WORKSPACE=${HOME}/workspace-protege
+
+###########################################################################
+#### ---- VSCode Specifics: Setup                                ---- #####
+###########################################################################
+#RUN sudo apt install -y graphviz
+
+#RUN sudo mkdir -p ${HOME}/.VSCode ${VSCODE_WORKSPACE} ${VSCODE_PLUGIN} 
+    
+## -- VSCode --
+#VOLUME ${HOME}/.VSCode
+
+## -- VSCode Workspace --
+#VOLUME ${VSCODE_WORKSPACE}
+
+## -- VSCode Plugin (to persist across multiple delete and create) --
+#VOLUME ${VSCODE_PLUGIN}
+
+###########################################################################
+#### ---- Application more: Pandoc, pptxgenjs, Asciidoc:     ---- #####
+###########################################################################
+## -- Pandoc --
+RUN sudo apt-get update -y && sudo apt-get install -y pandoc
+
+## -- PPTXgenJS --
+RUN sudo npm install pptxgenjs --save
+
+###########################################################################
+#### ---- User & Workspace: Setup                                ---- #####
+###########################################################################
+USER ${USER_NAME}
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN sudo chown $USER:$USER /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+# -- debug: --
+#CMD ["/bin/bash"]
+# -- app run: --
+CMD ["/usr/share/code/bin/code"]

@@ -1,0 +1,9 @@
+developer@074b4b8751e3:~/Desktop$ env|grep -i code
+PRODUCT_HOME=/home/developer/vscode-docker-vnc
+PRODUCT_NAME=vscode-docker-vnc
+CODE_EXE=/home/developer/code-server-3.4.1-linux-amd64/bin/code-server
+NPM_PREFIX=/home/developer/vscode-docker-vnc/component}
+VC_CODE_HOME=/home/developer/code-server-3.4.1-linux-amd64
+COMPONENT_DIR=/home/developer/vscode-docker-vnc/component
+PATH=/home/developer/.npm-global/bin:/usr/lib/jvm/java-8-openjdk-amd64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/apache-maven-3.6.3/bin:/.local/bin:/usr/lib/jvm/java-8-openjdk-amd64/bin:/home/developer/code-server-3.4.1-linux-amd64:/home/developer/code-server-3.4.1-linux-amd64/bin/code-server:/home/developer/code-server-3.4.1-linux-amd64/bin/code-server
+

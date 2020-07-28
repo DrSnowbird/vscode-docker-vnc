@@ -1,0 +1,687 @@
+#!/bin/bash -x
+
+env
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+echo ">>>> Current Script working DIR= $DIR"
+echo ">>>> Current Script working COMPONENT_DIR= $COMPONENT_DIR"
+
+echo ">>>> Who am i: `whoami` ; UID=`id -u` ; GID=`id -g`"
+
+echo ">>> CODE/code-server ENV VARS:"
+env |grep -i "code"
+echo
+
+#set -e
+
+######################################
+## -- Product/Service Meta Info: -- ##
+######################################
+##
+PROGRAM=$(basename $0)
+PRODUCT=${PROGRAM%%.sh}
+PRODUCT=code
+echo ">>> PRODUCT=${PRODUCT}"
+
+CODE_VERSION=${CODE_VERSION:-"1.47.3"}
+CODE_SERVER_VERSION=${CODE_SERVER_VERSION:-"3.4.1"}
+PRODUCT_VERSION=${CODE_VERSION}
+
+########################
+## Detect: OS Type -- ##
+########################
+##
+OS_TYPE="unknown"
+function detect_os_type() {
+    OS_TYPE="`which yum`"
+    if [ "`which yum`" != "" ] || [ "`which dnf`" != "" ]; then
+        # CentOS/RHEL
+        echo "... CentOS likely"
+        OS_TYPE="centos"
+    else
+        echo "... Ubuntu likely"
+        if [ "`which apt`" != "" ]; then
+            # Ubuntu
+            OS_TYPE="ubuntu"
+        else
+            OS_TYPE="unknown"
+        fi
+    fi
+}
+detect_os_type
+
+##########################################################################
+# ref: https://medium.com/@Drew_Stokes/bash-argument-parsing-54f3b81a6a8f
+#
+# (simple template for arg parse)
+# Use: Just modify the case's choices to meet you needs
+#
+# Test:
+#  ./vs-code-server.sh -s -a install -t generic -d remiaing args: code-extensions.txt
+#
+# ---> args: -a install -t generic -d remiaing args: code-extensions.txt
+# OK: value: install: 
+#  matched list: install run
+# ---> args: -t generic -d remiaing args: code-extensions.txt
+# OK: value: generic: 
+#  matched list: generic package distribution
+# ---- parsed args: ---
+# OK: value: generic: 
+#  matched list: generic package distribution
+# ACTION: -a : install
+# INSTALL_TYPE: -t : generic
+# remiaing args: remiaing args: code-extensions.txt
+#
+##########################################################################
+
+function usage() {
+    echo "-- usage --"
+    echo -e " $(basename $0)             \n \
+    [ -s|--server : (default) Install Server or not \n \
+    [ -d|--desktop : Install desktop or not \n \
+        (either VS Code or Code-Server; -s and -d are mutual exclusive) ] \n \
+    [ -a|--action : {install, run}] : default=install     \n \
+    [ -t|--install-type : {              \n \
+        generic : (*.tar.gz),            \n \
+        package : (*.deb, or *.rpm),     \n \
+        distribution : (auto-detect OS to install) } : default=generic ]
+    "
+    _ALLOWD_VALUES="generic package distribution"
+}
+
+# 0: false; 1: true (ok)
+_ARG_VALIDATE=0
+_ALLOWD_VALUES=""
+function _aux_validate_values() {
+    _ARG_VALIDATE=0
+    if [ "$_ALLOWD_VALUES" != "" ]; then
+        for allowed in $_ALLOWD_VALUES ; do
+            if [ "$allowed" = "$1" ]; then
+                echo -e "OK: value: $1: \n matched list: $_ALLOWD_VALUES"
+                _ARG_VALIDATE=1
+            fi
+        done
+    else
+        _ARG_VALIDATE=1
+    fi
+}
+
+
+_ARG_VALUE=""
+function _aux_arg_process() {
+    echo "---> args: $@"
+    _ARG_VALUE=""
+    if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        _ARG_VALIDATE=0
+        _aux_validate_values $2 $_ALLOWD_VALUES
+        if [ $_ARG_VALIDATE -gt 0 ]; then
+            _ARG_VALUE=$2
+        else
+            echo -e "Error: Argument for $1 is NOT ALLOWED: \n        acceptable are: $_ALLOWD_VALUES" >&2
+        fi
+    else
+        usage
+        echo "Error: Argument for $1 is missing value" >&2
+        exit 1
+    fi
+}
+
+#### ---- default values ----
+ACTION="install"
+INSTALL_TYPE="generic"
+INSTALL_SERVER=1
+  
+PARAMS=""
+while (( "$#" )); do
+    _ARG_VALUE=""
+    _ALLOWD_VALUES=""
+    case "$1" in
+        -s|--server)
+            INSTALL_SERVER=1
+            shift
+            ;;
+        -d|--desktop)
+            INSTALL_SERVER=0
+            shift
+            ;;
+        -a|--action)
+            _ALLOWD_VALUES="install run"
+            _aux_arg_process "$@"
+            if [ "$_ARG_VALUE" != "" ]; then
+                ACTION=$_ARG_VALUE
+                shift 2
+            fi
+            ;;
+        -t|--install-type)
+            _ALLOWD_VALUES="generic package distribution"
+            _aux_arg_process "$@"
+            if [ "$_ARG_VALUE" != "" ]; then
+                INSTALL_TYPE=$_ARG_VALUE
+                shift 2
+            fi
+            ;;
+        -*|--*=) # unsupported flags
+            echo "Error: Unsupported flag $1" >&2
+            usage
+            exit 1
+            ;;
+        *) # preserve positional arguments
+            PARAMS="$PARAMS $1"
+            shift
+            ;;
+    esac
+done
+
+# set positional arguments in their proper place
+eval set -- "$PARAMS"
+echo "---- parsed args: ---"
+echo "ACTION: -a : $ACTION"
+echo "INSTALL_TYPE: -t : $INSTALL_TYPE"
+echo "INSTALL_SERVER: -s : $INSTALL_SERVER"
+echo "remiaing args: $*"
+
+
+#########################################################
+#########################################################
+
+cd $HOME
+
+
+#########################################################
+## -- Mark installed entry in the installation log:"
+## -- (test only)
+#setInstallSuccessStatus "$(basename $0)"
+#########################################################
+#
+install_log_HOME=$HOME/workspace/$(basename $0)
+#install_log_HOME=${install_log_HOME%%.sh}
+mkdir -p ${install_log_HOME}
+
+function setInstallSuccessStatus() {
+    entry="$1"
+    DATE_WITH_TIME=`date "+%Y:%m:%d-%H:%M:%S"`
+    echo "$entry:installed:${DATE_WITH_TIME}" >> ${install_log_HOME}/install.log
+}
+
+#########################################################
+#### (test only): toggle this for debug/test only:   ####
+#setInstallSuccessStatus "$(basename $0)"
+#########################################################
+#
+function check_installed_before() {
+    if [ ! -s ${install_log_HOME}/install.log ]; then
+        echo "--- No install log/history found! Continue"
+        echo
+    else
+        installed=`cat ${install_log_HOME}/install.log | grep $(basename $1) |sort -u | tail -n1 | grep "installed"`
+        if [ "$installed" = "" ]; then
+            echo "--- $(basename $1): ---> installed done!"
+            exit 0
+        fi
+    fi
+}
+check_installed_before $0
+
+
+######################################
+## -- install: code-server       -- ##
+## -- Using "tar.gz" to install  -- ##
+## -- (the generic installation) -- ##
+######################################
+##
+CODE_SERVER_HOME=
+function install_code_server_linux64() {
+    #INSTALL_DIR=${1:-$HOME}/.local
+    INSTALL_DIR=${1:-$HOME}
+    mkdir -p ${INSTALL_DIR}
+    # if not provided, install to $HOME/<code_server>
+    cd $INSTALL_DIR
+    VS_CODE_URL=https://github.com/cdr/code-server/releases/download/${CODE_SERVER_VERSION}/code-server-${CODE_SERVER_VERSION}-linux-amd64.tar.gz
+    #curl -fOL https://github.com/cdr/code-server/releases/download/3.4.1/code-server-3.4.1-linux-amd64.tar.gz
+    wget -cq --no-check-certificate ${VS_CODE_URL}
+    ls -al .
+    if [ ! -s $(basename ${VS_CODE_URL}) ]; then
+        echo "*** ERROR ***: Download failed: $(basename ${VS_CODE_URL})"
+        exit 1
+    fi
+    tar -xvf $(basename ${VS_CODE_URL})
+    
+    # 
+    CODE_SERVER_HOME=$HOME/$(basename ${VS_CODE_URL})
+    CODE_SERVER_HOME=${CODE_SERVER_HOME%%.tar.gz}
+    #echo "export CODE_SERVER_HOME=${CODE_SERVER_HOME}" >> ~/.bashrc
+    #echo "export CODE_EXE=\${CODE_SERVER_HOME}/bin/code-server" >> ~/.bashrc
+    #echo "export PATH=\${PATH}:\${CODE_EXE}" >> ~/.bashrc
+    chmod +x ${CODE_SERVER_HOME}/bin/code-server
+    ls -al ${CODE_SERVER_HOME}/bin/code-server
+    echo "... Linux install of vc-code-server ...  done!"
+}
+
+#####################################
+## -- install: code-server      -- ##
+## (Ubuntu - using Debian package) ##
+#####################################
+##
+function install_code_server_ubuntu() {
+    VS_CODE_URL=https://github.com/cdr/code-server/releases/download/${CODE_SERVER_VERSION}/code-server_${CODE_SERVER_VERSION}_amd64.deb
+    curl -fOL ${VS_CODE_URL}
+
+    sudo apt install $(basename ${VS_CODE_URL})
+    sudo rm -f $(basename ${VS_CODE_URL})
+
+    echo "VS CODE Executble: `which code-server`"
+
+    echo "---- Installation MS VS Code Completed!"
+    echo "---- >>> Now visit http://127.0.0.1:8080. "
+    echo "---- >>> Your password is in:"
+    echo "     ~/.config/code-server/config.yaml"
+    echo " >> "
+    echo " bind-addr: 127.0.0.1:8080"
+    echo " auth: password"
+    echo " password: 897ba092098de7fd0ab5d7b0"
+    echo " cert: false"
+    echo ".... If launching code-server successfully done, your password:"
+    #cat ~/.config/code-server/config.yaml
+    
+}
+
+
+##################################
+## -- install: code-server   -- ##
+## (CentOS - using rpm package) ##
+##################################
+##
+function install_code_server_centos() {
+    VS_CODE_URL=https://github.com/cdr/code-server/releases/download/${CODE_SERVER_VERSION}/code-server-${CODE_SERVER_VERSION}-amd64.rpm
+    #curl -fOL https://github.com/cdr/code-server/releases/download/3.4.1/code-server-3.4.1-amd64.rpm
+    curl -fOL ${VS_CODE_URL}
+
+    #sudo rpm -i code-server-3.4.1-amd64.rpm
+    sudo rpm -i $(basename ${VS_CODE_URL})
+    sudo rm -f $(basename ${VS_CODE_URL})
+
+    #systemctl --user enable --now code-server
+    # >> Command line just: code-server
+
+    echo "VS CODE Executble: `which code-server`"
+    echo "---- Installation MS VS Code Completed!"
+    echo "---- >>> Now visit http://127.0.0.1:8080. "
+    echo "---- >>> Your password is in:"
+    echo "     ~/.config/code-server/config.yaml" 
+    echo ".... If launching code-server successfully done, your password:"
+    #cat ~/.config/code-server/config.yaml
+    
+}
+
+##################################
+## -- install: VS Code       -- ##
+## -- (Microsoft VS Code     -- ##
+## -- (not code-server!)     -- ##
+##################################
+## (Ubuntu - Distribution)   -- ##
+##################################
+##
+function install_code_distribution_ubuntu() {
+    # https://go.microsoft.com/fwlink/?LinkID=760868
+    VSCODE_TGZ_URL=https://go.microsoft.com/fwlink/?LinkID=760868 
+    VSCODE_PKG=code_1.47.2-1594837870_amd64.deb
+    #RUN wget -cq --no-check-certificate https://go.microsoft.com/fwlink/?LinkID=760868 -O code_1.47.2-1594837870_amd64.deb
+    wget -cq --no-check-certificate ${VSCODE_TGZ_URL} -O ${VSCODE_PKG}
+    sudo apt install -y ./${VSCODE_PKG} 
+
+    rm -f ${VSCODE_PKG}
+
+    VSCODE_HOME=/usr/share/code
+
+    VSCODE_PLUGIN=${VSCODE_PLUGIN:-${VSCODE_HOME}/plugins}
+    VSCODE_WORKSPACE=${HOME}/workspace-protege
+
+}
+
+##################################
+## -- install: VS Code       -- ##
+## -- (Microsoft VS Code     -- ##
+## -- (not code-server!)     -- ##
+##################################
+## (CentOS - Distribution)   -- ##
+##################################
+##
+function install_code_distribution_centos() {
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    sudo sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo'
+    # Then update the package cache and install the package using dnf (Fedora 22 and above):
+    if `which dnf`; then
+        sudo dnf check-update
+        sudo dnf install code
+    else
+        if `which yum`; then
+            # Or on older versions using yum:
+            sudo yum check-update -y
+            sudo yum install -y code
+        else
+            echo "*** ERROR ***: Mismatched Container OS and install_code_distribution_centos()! Abort!"
+            exit 0
+        fi
+    fi
+
+}
+
+##################################
+## Setup CODE/code-server EXE-- ##
+##################################
+##
+function setupCodeExe() {
+
+    source $HOME/.bashrc
+    
+    echo "............... setupCodeExe() ............"
+    code_exe_found=0
+    if [ -s ${CODE_SERVER_HOME}/bin/code-server ]; then
+        ## -- code-server: --
+        CODE_EXE=${CODE_SERVER_HOME}/bin/code-server
+        chmod +x ${CODE_SERVER_HOME}/bin/code-server
+        mkdir -p $HOME/bin
+        ln -s ${CODE_SERVER_HOME}/bin/code-server $HOME/bin/code
+        ls -al ${CODE_SERVER_HOME}/bin/code-server $HOME/bin/code
+        code_exe_found=1
+        PRODUCT_VERSION=${CODE_SERVER_VERSION}
+    else
+        CODE_EXE="`which code`"
+        if [ "${CODE_EXE}" = "" ]; then
+            echo
+            echo "******** ERROR: CODE_EXE is not set due to CANT find either code or code-server"
+            echo
+            code_exe_found=0
+        else
+            code_exe_found=1
+            PRODUCT_VERSION=${CODE_VERSION}
+        fi
+    fi
+    if [ $code_exe_found -gt 0 ]; then
+    
+        ## -- Wrapper for CODE_EXE to use generic PRODUCT_EXE variable name
+        PRODUCT_EXE=${CODE_EXE}
+                
+        export CODE_EXE=${CODE_EXE}
+        export PATH=${PATH}:${CODE_EXE}
+        echo "export CODE_EXE=${CODE_EXE}" >> $HOME/.bashrc
+        echo "export PATH=\${PATH}:\${CODE_EXE}" >> $HOME/.bashrc
+        cat $HOME/.bashrc
+        source $HOME/.bashrc
+    else
+        echo "***************************************************************************************"
+        echo "****** ERROR ******: setupCodeExe(): Can't find code/code-server: installation failure!"
+        echo "***************************************************************************************"
+        exit 1
+    fi
+}
+
+##################################
+## Install: CODE: Extensions -- ##
+##################################
+##
+function install_code_extension() {
+    echo "............... install_code_extension() ............"
+    #code --list-extensions
+    #code --install-extension ms-vscode.cpptools
+    #code --uninstall-extension ms-vscode.csharp
+    #echo.
+    #echo.
+    #echo Installing VS Code Extensions...
+    #call "C:\Program Files\Microsoft VS Code\bin\code" --install-extension ritwickdey.liveserver
+    #call "C:\Program Files\Microsoft VS Code\bin\code" --install-extension ritwickdey.live-sass
+    #call "C:\Program Files\Microsoft VS Code\bin\code" --install-extension ms-vscode.csharp
+    #call "C:\Program Files\Microsoft VS Code\bin\code" --install-extension PKief.material-icon-theme
+    #echo Done.
+    #echo.
+    #echo.
+    
+    # https://marketplace.visualstudio.com/items?itemName=asciidoctor.asciidoctor-vscode
+    # https://marketplace.visualstudio.com/items?itemName=waderyan.nodejs-extension-pack
+    # https://marketplace.visualstudio.com/items?itemName=swellaby.node-pack
+    
+    if [ "${CODE_EXE}" = "" ]; then
+        setupCodeExe
+    fi
+    
+    if [ ! "${CODE_EXE}" = ""  ]; then
+        PRODUCT_EXE=${CODE_EXE}
+        echo "export PATH=\${PATH}:\${CODE_EXE}" >> ~/.bashrc
+        ls -al ${CODE_EXE}
+        VS_CODE_EXTENSTION_LIST=${DIR}/vs-code-extension.txt
+        if [ -s ${VS_CODE_EXTENSTION_LIST} ]; then
+            #extension_list="asciidoctor.asciidoctor-vscode waderyan.nodejs-extension-pack swellaby.node-pack"
+            extension_list="`cat ${VS_CODE_EXTENSTION_LIST} `"
+            for ext in $extension_list; do
+                ${CODE_EXE} --install-extension $ext
+            done
+        else
+            echo "----------------------------------------------------------------------------------"
+            echo "*** ERROR ***: Can't find VS_CODE_EXTENSTION_LIST file: ${VS_CODE_EXTENSTION_LIST}"
+            echo "***   Ignore the auto installation of VS Code/Code-Server Extensions!"
+            echo "----------------------------------------------------------------------------------"
+        fi
+        echo "----------------------------------------------------------------------------------"
+        echo "--- SUCCESS ---: "
+        echo "---   Completed installation of CODE Extensions using: ${VS_CODE_EXTENSTION_LIST}"
+        echo "----------------------------------------------------------------------------------"
+        ${CODE_EXE} --list-extensions
+    else
+        echo "*** ERROR ***: CODE_EXE is not setup due to no code/code-server exe file found! Ignore!"
+        # exit 1
+    fi
+}
+
+##############################################
+#### ---- Config: Code / code-server ---- ####
+##############################################
+function config_code_server() {
+    mkdir -p $HOME/.config/code-server
+    cat <<EOF> $HOME/.config/code-server/config.yaml
+bind-addr: 0.0.0.0:8080
+auth: none
+password:
+cert: false
+EOF
+}
+    
+######################################
+#### ---- Code / code-server ---- ####
+######################################
+#  matched list: generic package distribution
+# ACTION: -a : install
+# INSTALL_TYPE: -t : generic
+# remiaing args: remiaing args: code-extensions.txt
+#
+# == List of installation choices ==
+#   install_code_server_linux64()
+#   install_code_server_ubuntu()
+#   install_code_server_centos()
+#   install_code_distribution_ubuntu()
+#   install_code_distribution_centos()
+#   install_code_extension()
+
+function install_service() {
+
+    if [ "${INSTALL_TYPE}" != "generic" ]; then
+        if [ ${INSTALL_SERVER} -gt 0 ]; then
+            INSTALL_TYPE="package"
+            case "$OS_TYPE" in
+                ubuntu*)  install_code_server_ubuntu ;;
+                centos*)  install_code_server_centos ;;
+                *)  install_code_server_linux64 ;;
+            esac
+        else
+            INSTALL_TYPE="distribution"
+            case "$OS_TYPE" in
+                ubuntu*)  install_code_distribution_ubuntu ;;
+                centos*)  install_code_distribution_centos ;;
+                *)  install_code_server_linux64 ;;
+            esac
+        fi
+    else
+        install_code_server_linux64
+    fi
+
+    #### ---- Setup code/code-server EXE path ---- ####
+    setupCodeExe
+
+    #### ---- Config code-server EXE path ---- ####
+    if [ "$(basename $CODE_EXE)" = "code-server" ]; then
+        config_code_server
+    fi
+
+    source ~/.bashrc
+    if [ "${CODE_EXE}" = "" ]; then
+        echo "*** ERROR: code (or code-server) installation FAIL!"
+        # TO-DO
+        exit 1
+    fi
+    
+    #### ---- Setup CODE_EXE variable to unifying 'code' and 'code-server" (two kinds of installations)
+    install_code_extension
+
+    ## -- Mark installed entry in the installation log:"
+    setInstallSuccessStatus "$(basename $0)"
+
+    echo "======================================================================================="
+    echo "==== Installation code (or code-server) and code extension packages: SUCCESSFULLY DONE!"
+    echo "==== To run: code"
+    echo "======================================================================================="
+}
+
+##################################
+## ---- Run: handlers        -- ##
+##################################
+##
+PID_EXE=""
+IS_RUNNING=0
+function isAppRunning() {
+    echo " ... Check Application already running or not: ..."
+    #PID_EXE="`ps aux|grep api-designer | grep node | grep -v grep | awk '{print $2}'`"
+    PID_EXE="`ps aux | grep -i $(basename ${PRODUCT_EXE}) | grep -v $(basename ${PRODUCT_EXE}) | awk '{print $2}'`"
+    if [ "x${PID_EXE}" != "x" ]; then
+        echo "... App Component ${PRODUCT} is already existing and running as PID=${PID_EXE}"
+        echo "... Skip request to run! ..."
+        IS_RUNNING=1
+    else
+        echo "... App Component ${PRODUCT} is NOT existing and running! "
+        IS_RUNNING=0
+    fi
+}
+
+######################################
+#### ----  Service Running   ---- ####
+######################################
+##
+function run_product_service() {
+
+    ## -- Make sure that Service Exec found: -- 
+    if [ "${PRODUCT_EXE}" = ""  ]; then
+        echo "*** ERROR ***: ${PRODUCT_EXE}: not found!"
+        echo "*** ERROR ***: ${PRODUCT_EXE}: Not installed yet! Abort!"
+        exit 1
+    fi
+    echo "--- run_service(): ${PRODUCT_EXE} found!}"
+    
+    ## -- Check whether Service Running -- 
+    isAppRunning
+    if [ ${IS_RUNNING} -gt 0 ]; then
+        exit 0
+    fi
+
+    # --auth The type of authentication to use. [password, none]
+    # CODE_AUTH=none
+    # If CODE_AUTH=none, this will be ignored
+    # --password The password for password authentication (can only be passed in via $PASSWORD or the config file).
+    # CODE_PASSWORD=codepassword
+    # CODE_BIND_ADDR=0.0.0.0
+    # CODE_EXE=${CODE_EXE:-/home/developer/code-server-3.4.1-linux-amd64/bin/code-server}
+    # VC_CODE_HOME=${VC_CODE_HOME:-/home/developer/code-server-3.4.1-linux-amd64}
+    # ${CODE_EXE} --auth ${CODE_AUTH:-none} --password ${CODE_PASSWORD:-codepassword} --bind-addr ${CODE_BIND_ADDR:-0.0.0.0}
+
+    # nohup ${PRODUCT_EXE} --auth ${CODE_AUTH:-none} --password ${CODE_PASSWORD:-codepassword} --bind-addr ${CODE_BIND_ADDR:-0.0.0.0} 2>&1 &
+    nohup ${PRODUCT_EXE} ${RUN_OPTIONS} 2>&1 &
+    rm -f nohup.out
+}
+
+#########################################
+#### ----  Running: code-server ---- ####
+#########################################
+##
+function run_code_server() {
+
+    source $HOME/.bashrc
+    
+    ## -- Make sure ENV Variables are setup: --
+    env |grep -i $(basename ${CODE_EXE}) | sort
+    
+    ## -- Find Service Exec -- 
+    if [ "${CODE_EXE}" = "" ]; then
+        setupCodeExe
+    fi
+    
+    ## -- Make sure that Service Exec found: -- 
+    if [ "${CODE_EXE}" = ""  ]; then
+        echo "*** ERROR ***: code/code-server: Not installed yet! Abort!"
+        exit 1
+    fi
+    echo "------------------------------------------------------------"
+    echo "--- SUCCESS: run_code_server(): CODE_EXE found: ${CODE_EXE}"
+    echo "------------------------------------------------------------"
+
+    ## -- Prepare for Service Running -- 
+    if [ "$(basename ${CODE_EXE})" = "code-server" ]; then
+        # RUN_OPTIONS="--auth ${CODE_AUTH:-none} --bind-addr ${CODE_BIND_ADDR:-0.0.0.0:8080}"
+        RUN_OPTIONS=""
+    else
+        RUN_OPTIONS=""
+    fi
+    
+    PRODUCT_EXE=${CODE_EXE}
+    ## -- Using generic Run Product Service --
+    run_product_service
+}
+
+
+######################################################
+#### ---- Run Wrapper for Code / code-server ---- ####
+######################################################
+PRODUCT_WORKSPACE=${HOME}/Projects/${PRODUCT}
+PRODUCT_LOG=${PRODUCT_WORKSPACE}/logs/${PRODUCT}.log
+RUN_OPTIONS=""
+##
+function run_service() {
+    
+    mkdir -p ${PRODUCT_WORKSPACE} ${PRODUCT_WORKSPACE}/logs
+    
+    run_code_server
+    
+}
+
+
+##########################################################################################################
+############################################# ---- main ---- #############################################
+##########################################################################################################
+
+echo "ACTION: -a : $ACTION"
+echo "INSTALL_TYPE: -t : $INSTALL_TYPE"
+echo "INSTALL_SERVER: -s : $INSTALL_SERVER"
+
+##################################
+#### ---- ACTION Handler ---- ####
+##################################
+case $ACTION in
+    install)
+        install_service
+        ;;
+    run)
+        run_service
+        ;;
+    *)
+        echo "Nothing to do!"
+        exit 0
+        ;;
+esac
+
