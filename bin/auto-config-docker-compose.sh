@@ -25,7 +25,7 @@ if [ ! -s ${DOCKER_COMPOSE_TEMPLATE} ]; then
 else
     #volumes="./app ./data ./workspace ./.vscode/extensions"
     # cat docker-compose.yml.template |grep -E '^( |\t)*- .\/.*:.*$'|cut -d':' -f1|awk '{print $2}'
-    volumes_current_dir="`cat ${DOCKER_COMPOSE_TEMPLATE} |grep -E '^( |\t)*- .\/.*:.*$'|cut -d':' -f1|awk '{print $2}' ` "
+    volumes_current_dir="`cat ${DOCKER_COMPOSE_TEMPLATE} |grep -E '^( |\t)*- +.\/.*:.*$'|cut -d':' -f1|awk '{print $2}' ` "
     for v in $volumes_current_dir; do
         if [ ! -s $v ]; then
             mkdir -p ${PROJ_DIR}/$v
