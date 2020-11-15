@@ -1,25 +1,15 @@
-# KNIME (latest/4.1) + Java 8 (1.8.0) OpenJDK + Maven 3.6 + Python 3.6 + PIP3 19 + + npm 6 + node 13 + Gradle 6 + noVNC
+# Visual Studo Code + Java 8 (1.8.0) OpenJDK + Maven 3.6 + Python 3.6 + PIP3 19 + + npm 6 + node 13 + Gradle 6 + noVNC
 KNIME Analytics Platform with VNC/noVNC for Container Cluster Platforms (Openshift, Kubernetes, etc.)
-[![](https://images.microbadger.com/badges/image/openkbs/knime-vnc-docker.svg)](https://microbadger.com/images/openkbs/knime-vnc-docker "Get your own image badge on microbadger.com") [![](https://images.microbadger.com/badges/version/openkbs/knime-vnc-docker.svg)](https://microbadger.com/images/openkbs/knime-vnc-docker "Get your own version badge on microbadger.com")
-
-# Just a suggestion: If you need Python Jupyter (loaded with Tensorflow) Docker besides KNIME, you may want to check out:
-* [Python Jupyter (by openkbs/tensorflow-python3-jupyter)](https://hub.docker.com/repository/docker/openkbs/tensorflow-python3-jupyter)
+[![](https://images.microbadger.com/badges/image/openkbs/vscode-docker-vnc.svg)](https://microbadger.com/images/openkbs/vscode-docker-vnc "Get your own image badge on microbadger.com") [![](https://images.microbadger.com/badges/version/openkbs/vscode-docker-vnc.svg)](https://microbadger.com/images/openkbs/vscode-docker-vnc "Get your own version badge on microbadger.com")
 
 # Components:
-* VNC/NoVNC-based Docker [KNIME Platform](https://www.knime.com/) for Use with HTML 5 Browsers from anywhere.
-* [KNIME Platform](https://www.knime.com/download-knime-analytics-platform-sdk) latest (v 4.1) for Machine Learning & Big Data Analytics
 * Ubuntu 18.04 LTS now and we will use Ubuntu 20.04 on or about 2020-04-15 as LTS Docker base image.
-* openjdk version "1.8.0_252"
-  OpenJDK Runtime Environment (build 1.8.0_252-8u252-b09-1~18.04-b09)
-  OpenJDK 64-Bit Server VM (build 25.252-b09, mixed mode)
-* Apache Maven 3.6
-* Python 3.6 / Python 2.7 + pip 20 + Python3 virtual environments (venv, virtualenv, virtualenvwrapper, mkvirtualenv, ..., etc.)
-* Node v13 + npm 6 (from NodeSource official Node Distribution)
-* Gradle 6
-* Other tools: git wget unzip vim python python-setuptools python-dev python-numpy, ..., etc.
+* [openkbs/jdk-mvn-py3 README.md](https://github.com/DrSnowbird/jdk-mvn-py3/blob/master/README.md)
+* [Base Container Image: openkbs/jdk-mvn-py3](https://github.com/DrSnowbird/jdk-mvn-py3)
+* [Base Components: OpenJDK, Python 3, PIP, Node/NPM, Gradle, Maven, etc.](https://github.com/DrSnowbird/
 
 # Run (recommended for easy-start)
-Image is pulled from openkbs/knime-vnc-docker
+Image is pulled from openkbs/vscode-docker-vnc
 ```
 ./run.sh
 ```
@@ -27,8 +17,8 @@ Image is pulled from openkbs/knime-vnc-docker
 ## Mobile devices and Desktop PC supported / tested:
 * SmartPhones: tested ok! iPhone5 Safari works though phone screen size being too small vs the desired HD 1920x1080. It should work across all the smartphones with HTML5-capable brwosers. Hence, to access with small phone screen, run with VNC_RESOLUTION=800x600 (or adjust it to fit your phone's screen size).
 * Tablets: tested ok! Amazon Fire with noVNC works!. It should work across all the tablets with HTML5-capable brwosers.
-See [KNIME Analytics with Amazon Fire tablet](https://github.com/DrSnowbird/knime-vnc-docker/blob/master/doc/knime-vnc-docker-on-Amazon-Fire-tablet.jpeg)
-* Desktop PC or MacBook: tested ok! It should work across all PCs Desktop with HTML5-capable brwosers. See [KNIME Analytics on Desktop PC Browser](https://github.com/DrSnowbird/knime-vnc-docker/blob/master/doc/knime-vnc-docker-on-Desktop-PC-Browser.png)
+See [KNIME Analytics with Amazon Fire tablet](https://github.com/DrSnowbird/vscode-docker-vnc/blob/master/doc/vscode-docker-vnc-on-Amazon-Fire-tablet.jpeg)
+* Desktop PC or MacBook: tested ok! It should work across all PCs Desktop with HTML5-capable brwosers. See [KNIME Analytics on Desktop PC Browser](https://github.com/DrSnowbird/vscode-docker-vnc/blob/master/doc/vscode-docker-vnc-on-Desktop-PC-Browser.png)
 
 ## Connect to VNC Viewer/Client or noVNC (Browser-based VNC)
 * connect via VNC viewer localhost:5901, default password: vncpassword
@@ -75,11 +65,6 @@ You can build your own image locally.
 ./build.sh
 ```
 
-# References
-* [KNIME](https://www.knime.com)
-* [KNIME Analytics Platform](https://www.knime.com/download-knime-analytics-platform-sdk)
-* [KNIME FAQ](https://www.knime.com/faq#q6)
-
 # VNC/noVNC Resources
 * [VNC Viewer / Client](https://www.realvnc.com/en/connect/download/viewer/)
 * [TightVNC](https://www.tightvnc.com/download.php)
@@ -87,7 +72,7 @@ You can build your own image locally.
 # See also VNC/noVNC docker-based IDE or Analytics Platform
 * [consol/ubuntu-xfce-vnc](https://hub.docker.com/r/consol/ubuntu-xfce-vnc/)
 * [openkbs/eclipse-photon-vnc-docker](https://hub.docker.com/r/openkbs/eclipse-photon-vnc-docker/)
-* [openkbs/knime-vnc-docker](https://hub.docker.com/r/openkbs/knime-vnc-docker/)
+* [openkbs/vscode-docker-vnc](https://hub.docker.com/r/openkbs/vscode-docker-vnc/)
 
 # See Also - docker-based IDE
 * [openkbs/atom-docker](https://hub.docker.com/r/openkbs/atom-docker/)
@@ -96,7 +81,7 @@ You can build your own image locally.
 * [openkbs/eclipse-photon-vnc-docker](https://hub.docker.com/r/openkbs/eclipse-photon-vnc-docker/)
 * [openkbs/intellj-docker](https://hub.docker.com/r/openkbs/intellij-docker/)
 * [openkbs/intellj-vnc-docker](https://hub.docker.com/r/openkbs/intellij-vnc-docker/)
-* [openkbs/knime-vnc-docker (VNC/NoVNC)](https://hub.docker.com/r/openkbs/knime-vnc-docker/)
+* [openkbs/vscode-docker-vnc (VNC/NoVNC)](https://hub.docker.com/r/openkbs/vscode-docker-vnc/)
 * [openkbs/knime-docker (X11/Desktop)](https://hub.docker.com/r/openkbs/knime-docker/)
 * [openkbs/netbeans10-docker](https://hub.docker.com/r/openkbs/netbeans10-docker/)
 * [openkbs/netbeans](https://hub.docker.com/r/openkbs/netbeans/)
@@ -116,84 +101,5 @@ java.lang.NoClassDefFoundError: org/apache/aries/blueprint/NamespaceHandler
 ```
 
 # Releases information
-```
-developer@5292c62873a0:~/workspace$ /usr/scripts/printVersions.sh 
-+ echo JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-+ whereis java
-java: /usr/bin/java /usr/share/java /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/share/man/man1/java.1.gz
-+ echo
-
-+ java -version
-openjdk version "1.8.0_252"
-OpenJDK Runtime Environment (build 1.8.0_252-8u252-b09-1~18.04-b09)
-OpenJDK 64-Bit Server VM (build 25.252-b09, mixed mode)
-+ mvn --version
-Apache Maven 3.6.3 (cecedd343002696d0abb50b32b541b8a6ba2883f)
-Maven home: /usr/apache-maven-3.6.3
-Java version: 1.8.0_252, vendor: Private Build, runtime: /usr/lib/jvm/java-8-openjdk-amd64/jre
-Default locale: en, platform encoding: UTF-8
-OS name: "linux", version: "5.3.0-53-generic", arch: "amd64", family: "unix"
-+ python -V
-Python 2.7.17
-+ python3 -V
-Python 3.6.9
-+ pip --version
-pip 20.0.2 from /usr/local/lib/python3.6/dist-packages/pip (python 3.6)
-+ pip3 --version
-pip 20.0.2 from /usr/local/lib/python3.6/dist-packages/pip (python 3.6)
-+ gradle --version
-
-Welcome to Gradle 6.0.1!
-
-Here are the highlights of this release:
- - Substantial improvements in dependency management, including
-   - Publishing Gradle Module Metadata in addition to pom.xml
-   - Advanced control of transitive versions
-   - Support for optional features and dependencies
-   - Rules to tweak published metadata
- - Support for Java 13
- - Faster incremental Java and Groovy compilation
- - New Zinc compiler for Scala
- - VS2019 support
- - Support for Gradle Enterprise plugin 3.0
-
-For more details see https://docs.gradle.org/6.0.1/release-notes.html
-
-
-------------------------------------------------------------
-Gradle 6.0.1
-------------------------------------------------------------
-
-Build time:   2019-11-18 20:25:01 UTC
-Revision:     fad121066a68c4701acd362daf4287a7c309a0f5
-
-Kotlin:       1.3.50
-Groovy:       2.5.8
-Ant:          Apache Ant(TM) version 1.10.7 compiled on September 1 2019
-JVM:          1.8.0_252 (Private Build 25.252-b09)
-OS:           Linux 5.3.0-53-generic amd64
-
-+ npm -v
-6.14.4
-+ node -v
-v14.0.0
-+ cat /etc/lsb-release /etc/os-release
-DISTRIB_ID=Ubuntu
-DISTRIB_RELEASE=18.04
-DISTRIB_CODENAME=bionic
-DISTRIB_DESCRIPTION="Ubuntu 18.04.4 LTS"
-NAME="Ubuntu"
-VERSION="18.04.4 LTS (Bionic Beaver)"
-ID=ubuntu
-ID_LIKE=debian
-PRETTY_NAME="Ubuntu 18.04.4 LTS"
-VERSION_ID="18.04"
-HOME_URL="https://www.ubuntu.com/"
-SUPPORT_URL="https://help.ubuntu.com/"
-BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
-PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
-VERSION_CODENAME=bionic
-UBUNTU_CODENAME=bionic
-```
+* [See Releases Information](https://github.com/DrSnowbird/jdk-mvn-py3#releases-information)
 

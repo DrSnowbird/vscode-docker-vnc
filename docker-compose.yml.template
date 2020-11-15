@@ -35,13 +35,13 @@ services:
       - /etc/hosts:/etc/hosts
       - /dev/shm:/dev/shm 
       - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/.X11-unix:/tmp/.X11-unix
+      #- /tmp/.X11-unix:/tmp/.X11-unix
       #- ./certificates:/home/developer/certificates
       ## ==== Use $HOME/data-docker as base directory: ====
-      #- $HOME/data-docker/knime-vnc-docker/app:/home/developer/app
-      #- $HOME/data-docker/knime-vnc-docker/data:/home/developer/data
-      #- $HOME/data-docker/knime-vnc-docker/workspace:/home/developer/workspace
-      #- $HOME/data-docker/knime-vnc-docker/extensions:/home/developer/.vscode/extensions 
+      #- $HOME/data-docker/vscode-docker-vnc/app:/home/developer/app
+      #- $HOME/data-docker/vscode-docker-vnc/data:/home/developer/data
+      #- $HOME/data-docker/vscode-docker-vnc/workspace:/home/developer/workspace
+      #- $HOME/data-docker/vscode-docker-vnc/extensions:/home/developer/.vscode/extensions 
       ## ==== Use current directory as root for mapping Volumes ====
       ## (You need to manually create those child directory: ./data, ./workspace, ./.vscode/extensions)
       - ./app:/home/developer/app
